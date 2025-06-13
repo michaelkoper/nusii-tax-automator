@@ -129,7 +129,7 @@ The system uses a `temp/` directory for intermediate processing:
 
 ### Quaderno Upload Errors
 - Verify the Quaderno API key and URL are correct
-- Check that vendor categories match those in `lib/category_mappings.rb`
+- Check that vendor categories match those in `config/category_mappings.yml`
 - Ensure the Quaderno contact IDs are valid
 
 ### Missing Dependencies
