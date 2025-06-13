@@ -1,0 +1,34 @@
+Parse the following text and return the extracted information in JSON format. 
+The JSON should contain fields for 'category', 'pre_tax_price', 'tax', 
+'tax_percentage', 'total_price', 'retencion', 'retencion_percentage', 'currency', and 'date'. 
+
+The 'category' field should be one of the following: 
+company_a, company_b, company_c, company_d, company_e, 
+contractor_a, contractor_b, service_a, service_b, service_c, 
+service_d, service_e, service_f, unknown
+
+Example mappings:
+- Company A Inc. should have category company_a
+- Service Provider B should have category service_b
+- Contractor John Doe should have category contractor_a
+- Cloud Service X should have category service_c
+
+Special handling rules:
+- For Service Provider D, the tax_percentage should be 0.0
+- For Service E, use the 'Total Due' field and set tax_percentage and tax to 0.0
+- Service E invoices are always dated the 8th of the following month
+
+The 'currency' field should be one of the following: USD, GBP, EUR.
+The 'date' field should be in the YYYY-MM-DD format.
+The 'pre_tax_price' field should be a number and should be the before tax amount.
+The 'tax' field should be a number and should be the absolute amount of VAT/IVA.
+The 'tax_percentage' field should be a number and should be the percentage amount of VAT/IVA.
+The 'total_price' total price including tax.
+The 'retencion' field should be a number and should be the absolute amount of retention deducted from the invoice.
+The 'retencion_percentage' field should be the percentage amount of 'retencion', if applicable.
+
+Note that some invoices may use ',' instead of '.' as a decimal separator.
+For multi-currency invoices, only use the primary currency amounts.
+
+Here is the text to parse:
+{TEXT_TO_PARSE}

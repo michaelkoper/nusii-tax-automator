@@ -1,0 +1,61 @@
+# Environment variables
+.env
+
+# Temporary files
+temp/
+*.tmp
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Ruby/Bundler
+.bundle
+vendor/bundle
+vendor/cache
+*.gem
+*.rbc
+.config
+coverage/
+InstalledFiles
+pkg/
+spec/reports/
+test/tmp/
+test/version_tmp/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Python artifacts (from old scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv
+env/
+ENV/
+*.egg-info/
+
+# Archive files
+*.zip
+*.tar.gz
+
+# Local development
+.ruby-version
+.ruby-gemset
+
+# Sensitive data
+*.pem
+*.key
+private/
+
+# Configuration files
+prompt.txt
+config/category_mappings.yml

@@ -1,0 +1,52 @@
+# Category Mappings Configuration
+# This file maps vendor categories to Quaderno contact information
+# Copy this file to config/category_mappings.yml and update with your actual contact IDs
+
+vendors:
+  openai:
+    contact_id: 12345678
+    contact_full_name: "OpenAI, LLC"
+    item_description: "AI API usage"
+    payment_method: "credit_card"
+  
+  zoom:
+    contact_id: 23456789
+    contact_full_name: "Zoom Video Communications Inc."
+    item_description: "Video conferencing subscription"
+    payment_method: "direct_debit"
+  
+  docraptor:
+    contact_id: 34567890
+    contact_full_name: "DocRaptor"
+    item_description: "PDF generation services"
+    payment_method: "credit_card"
+  
+  github:
+    contact_id: 45678901
+    contact_full_name: "GitHub Inc"
+    item_description: "Code repository hosting"
+    payment_method: "credit_card"
+  
+  aws:
+    contact_id: 56789012
+    contact_full_name: "Amazon Web Services Inc."
+    item_description: "Cloud computing services"
+    payment_method: "credit_card"
+  
+  digitalocean:
+    contact_id: 67890123
+    contact_full_name: "DigitalOcean LLC"
+    item_description: "Cloud hosting services"
+    payment_method: "credit_card"
+  
+  stripe:
+    contact_id: 78901234
+    contact_full_name: "Stripe Inc."
+    item_description: "Payment processing fees"
+    payment_method: "wire_transfer"
+  
+  google:
+    contact_id: 89012345
+    contact_full_name: "Google LLC"
+    item_description: "Google Workspace subscription"
+    payment_method: "credit_card"
