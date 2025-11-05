@@ -40,7 +40,8 @@ class TaxProcessor
         menu.choice 'Show expenses JSON file', 3
         menu.choice 'Upload processed invoices to Quaderno', 4
         menu.choice 'Compress tax folder', 5
-        menu.choice 'Exit', 6
+        menu.choice 'Open tax folder in Finder', 6
+        menu.choice 'Exit', 7
       end
 
       case choice
@@ -55,6 +56,8 @@ class TaxProcessor
       when 5
         compress_tax_folder
       when 6
+        open_tax_folder_in_finder
+      when 7
         puts 'Bye!'
         break
       end
@@ -67,7 +70,8 @@ class TaxProcessor
     choices = {
       'Previous month': 1,
       'Current month': 2,
-      'Next month': 3
+      'Next month': 3,
+      'Two months ago': 4
     }
 
     choice = @prompt.select('For what month do you want to do the taxes?', choices)
@@ -76,6 +80,7 @@ class TaxProcessor
     when 1 then 1.month.ago
     when 2 then Time.current
     when 3 then 1.month.from_now
+    when 4 then 2.months.ago
     end
   end
 
@@ -252,6 +257,26 @@ class TaxProcessor
       puts "\n❌ Failed to create zip file"
     end
 
+    @prompt.keypress("\nPress any key to continue...")
+  end
+
+  def open_tax_folder_in_finder
+    month = select_month
+    dir_name = get_directory_name(month)
+
+    unless File.directory?(dir_name)
+      puts "\n❌ Directory #{dir_name} does not exist!"
+      puts 'Please create the tax folder first by downloading Stripe reports.'
+      @prompt.keypress("\nPress any key to continue...")
+      return
+    end
+
+    puts "\n📂 Opening tax folder in Finder..."
+    puts "Folder: #{dir_name}"
+    
+    system("open \"#{dir_name}\"")
+    
+    puts "\n✓ Opened folder in Finder"
     @prompt.keypress("\nPress any key to continue...")
   end
 end
