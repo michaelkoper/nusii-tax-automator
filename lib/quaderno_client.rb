@@ -56,6 +56,21 @@ class QuadernoClient
     end
   end
 
+  def create_contact(attributes)
+    response = @connection.post('contacts', attributes)
+
+    if response.status == 201
+      puts "Contact created: #{response.body['full_name']} (id: #{response.body['id']})"
+    else
+      puts "Error creating contact: #{response.body}"
+    end
+
+    response.body
+  rescue Faraday::Error => e
+    puts "HTTP Error: #{e.message}"
+    { 'error' => e.message }
+  end
+
   private
 
   def build_expense_data(expense, details)
