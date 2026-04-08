@@ -105,22 +105,23 @@ Dropbox/Taxes/
 - **COMPANY_NAME**: Your company name (used in zip file naming)
 - **STRIPE_CURRENCIES**: Comma-separated list of currencies to download Stripe reports for (e.g., `usd`, `usd,eur`, `usd,eur,gbp`)
 
-### Vendor Categories
+### Contacts
 
-The system automatically categorizes invoices from known vendors using the `config/category_mappings.yml` file. This YAML configuration defines:
+The system automatically categorizes invoices from known vendors using the `config/contacts.yml` file. This YAML configuration defines:
 - Vendor names and their Quaderno contact IDs
 - Item descriptions for each vendor
 - Payment methods (credit_card, direct_debit, etc.)
-- Mappings for vendor name variations
+- Optional `identifiers` (hints for recognizing invoices when the brand only appears in the logo)
+- Optional `rules` (vendor-specific parsing instructions for the LLM)
 
-To add a new vendor, edit `config/category_mappings.yml` and add an entry under the `vendors` section. The full vendor list is automatically injected into the AI prompt at runtime — there's no need to edit `prompt.txt` when adding a vendor.
+To add a new vendor, edit `config/contacts.yml` and add an entry under the `contacts` section. The full contact list is automatically injected into the AI prompt at runtime — there's no need to edit `prompt.txt` when adding a vendor.
 
 ### Prompt Template
 
 `prompt.txt` is rendered with [Liquid](https://shopify.github.io/liquid/) before being sent to OpenAI. Two variables are available:
 
 - `{{ text_to_parse }}` — the extracted text of the PDF invoice being processed
-- `{{ category_mappings }}` — a bullet list built from `config/category_mappings.yml`, giving the LLM the full set of valid category keys and their vendor names
+- `{{ contacts }}` — a bullet list built from `config/contacts.yml`, giving the LLM the full set of valid category keys, their vendor names, and any identifiers/rules
 
 See `prompt.txt.example` for a starting template.
 
@@ -138,7 +139,7 @@ The system uses a `temp/` directory for intermediate processing:
 
 ### Quaderno Upload Errors
 - Verify the Quaderno API key and URL are correct
-- Check that vendor categories match those in `config/category_mappings.yml`
+- Check that vendor categories match those in `config/contacts.yml`
 - Ensure the Quaderno contact IDs are valid
 
 ### Missing Dependencies
@@ -148,24 +149,27 @@ Run `bundle install` to ensure all gems are installed.
 
 ### Adding New Vendors
 
-1. Edit `config/category_mappings.yml`
-2. Add the vendor under the `vendors` section:
+1. Edit `config/contacts.yml`
+2. Add the vendor under the `contacts` section:
 ```yaml
-vendors:
+contacts:
   new_vendor:
     contact_id: 12345678
     contact_full_name: "Vendor Name"
     item_description: "Service description"
     payment_method: "credit_card"
-    # Optional: hints for the LLM when the vendor name is not in the extracted
-    # PDF text (e.g. it only appears in the logo). Include any unique strings
-    # from the footer, cluster/product naming patterns, etc.
+    # Optional: hints for the LLM when the vendor name is not in the
+    # extracted PDF text (e.g. it only appears in the logo).
     identifiers:
       - "footer 'Some Company | Suite 3A'"
       - "product names like 'widget-pro' or 'widget-basic'"
+    # Optional: vendor-specific parsing rules that override the generic
+    # logic (e.g. which field to use for the date or total).
+    rules:
+      - "The invoice date is the 'Sent on' date, not the billing period"
 ```
 
-The vendor list and its identifiers are injected into the LLM prompt automatically at runtime — no need to edit `prompt.txt`.
+Vendors, identifiers, and rules are injected into the LLM prompt automatically at runtime — no need to edit `prompt.txt`.
 
 ## Security Notes
 

@@ -3,11 +3,9 @@ require 'ruby/openai'
 require 'json'
 require 'fileutils'
 require 'liquid'
-require_relative 'category_mappings'
+require_relative 'contacts'
 
 class PdfProcessor
-  include CategoryMappings
-
   def initialize
     @openai_client = OpenAI::Client.new(access_token: ENV['OPENAI_API_KEY'])
     @email_attachments_folder = ENV['EMAIL_ATTACHMENTS_FOLDER']
@@ -110,16 +108,25 @@ class PdfProcessor
     template = Liquid::Template.parse(File.read(prompt_file_path))
     template.render(
       'text_to_parse' => text,
-      'category_mappings' => format_category_mappings
+      'contacts' => format_contacts
     )
   end
 
-  def format_category_mappings
-    CATEGORY_DETAILS.map do |key, details|
-      line = "- #{key}: #{details[:contact_full_name]} — #{details[:item_description]}"
-      identifiers = details[:identifiers]
-      line += "\n    (identifiers: #{identifiers.join('; ')})" if identifiers.any?
-      line
+  def format_contacts
+    Contacts.all.map do |key, details|
+      lines = ["- #{key}: #{details[:contact_full_name]} — #{details[:item_description]}"]
+
+      if details[:identifiers].any?
+        lines << '    identifiers:'
+        details[:identifiers].each { |id| lines << "      - #{id}" }
+      end
+
+      if details[:rules].any?
+        lines << '    rules:'
+        details[:rules].each { |rule| lines << "      - #{rule}" }
+      end
+
+      lines.join("\n")
     end.join("\n")
   end
 

@@ -10,7 +10,7 @@ require 'json'
 # Load our custom libraries
 require_relative 'lib/pdf_processor'
 require_relative 'lib/quaderno_client'
-require_relative 'lib/category_mappings'
+require_relative 'lib/contacts'
 
 # TODO: download Stripe Tax Invoice
 # TODO: download bank statements and put them in the drop box folder
@@ -187,8 +187,8 @@ class TaxProcessor
     expenses.each_with_index do |expense, index|
       puts "\n##{index + 1}"
 
-      # Check if category is unknown (not in CategoryMappings)
-      is_unknown = !CategoryMappings::CATEGORY_DETAILS.key?(expense['category'].to_sym)
+      # Check if category is unknown (not in Contacts)
+      is_unknown = !Contacts.all.key?(expense['category'].to_sym)
 
       expense.each do |key, value|
         formatted_key = key.to_s.gsub('_', ' ').capitalize
@@ -207,7 +207,7 @@ class TaxProcessor
 
     # Show summary by category
     category_counts = expenses.group_by { |e| e['category'] }.transform_values(&:count)
-    unknown_categories = category_counts.keys.select { |cat| !CategoryMappings::CATEGORY_DETAILS.key?(cat.to_sym) }
+    unknown_categories = category_counts.keys.select { |cat| !Contacts.all.key?(cat.to_sym) }
 
     if unknown_categories.any?
       puts "\n⚠️  Unknown categories found:"

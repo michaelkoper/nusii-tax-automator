@@ -3,14 +3,17 @@ The JSON should contain fields for 'category', 'pre_tax_price', 'tax',
 'tax_percentage', 'total_price', 'retencion', 'retencion_percentage', 'currency', and 'date'.
 
 The 'category' field should match one of the keys in the mapping below. Use
-'unknown' if none of them fits the invoice. Some entries have additional
-"identifiers" listed underneath — these are hints for recognizing the vendor
-when the invoice text does not contain the brand name directly (e.g. the brand
-only appears in the logo). If the parsed text matches any identifier, use that
-category.
+'unknown' if none of them fits the invoice. Some entries include extra blocks:
 
-Category mapping (key: vendor full name — item description):
-{{ category_mappings }}
+- "identifiers" — hints for recognizing the vendor when the invoice text does
+  not contain the brand name directly (e.g. the brand only appears in the
+  logo). If the parsed text matches any identifier, use that category.
+- "rules" — vendor-specific parsing rules that override the generic logic
+  (e.g. which field to use for the date or total). Apply them when the invoice
+  matches that vendor.
+
+Contacts (key: vendor full name — item description):
+{{ contacts }}
 
 Special handling rules:
 - For Service Provider D, the tax_percentage should be 0.0

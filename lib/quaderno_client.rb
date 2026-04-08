@@ -2,11 +2,9 @@ require 'faraday'
 require 'json'
 require 'base64'
 require 'fileutils'
-require_relative 'category_mappings'
+require_relative 'contacts'
 
 class QuadernoClient
-  include CategoryMappings
-
   def initialize
     @api_key = ENV['QUADERNO_API_KEY']
     @api_url = ENV['QUADERNO_API_URL']
@@ -34,7 +32,7 @@ class QuadernoClient
 
     expenses.each do |expense|
       category = expense['category'].to_sym
-      details = CATEGORY_DETAILS[category] || {}
+      details = Contacts.all[category] || {}
 
       if details.empty?
         puts "Warning: No category details found for #{category}. Skipping..."

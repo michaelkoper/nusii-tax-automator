@@ -1,12 +1,16 @@
-# Category Mappings Configuration
-# This file maps vendor categories to Quaderno contact information
-# Copy this file to config/category_mappings.yml and update with your actual contact IDs
+# Contacts Configuration
+# This file maps vendor categories to Quaderno contact information, plus
+# optional identifiers and rules that get injected into the LLM prompt.
+# Copy this file to config/contacts.yml and update with your actual contact IDs
 
-vendors:
-  # Each vendor supports an optional `identifiers` list with hints the LLM can
-  # use to recognize the invoice when the vendor name only appears in the logo
-  # (not in the extracted PDF text). Identifiers are injected into the prompt
-  # alongside the vendor name.
+contacts:
+  # Each contact supports two optional lists that get injected into the LLM
+  # prompt alongside the vendor name:
+  #
+  #   identifiers — hints for recognizing the invoice when the vendor name
+  #                 only appears in the logo (not in the extracted PDF text)
+  #   rules       — vendor-specific parsing rules (e.g. "use the 'Sent on'
+  #                 date instead of the invoice period")
   openai:
     contact_id: 12345678
     contact_full_name: "OpenAI, LLC"
@@ -15,43 +19,47 @@ vendors:
     # identifiers:
     #   - "footer text or address that uniquely identifies this vendor"
     #   - "specific product names or SKU patterns"
-  
+    # rules:
+    #   - "The invoice date is the 'Sent on' date, not the billing period"
+
   zoom:
     contact_id: 23456789
     contact_full_name: "Zoom Video Communications Inc."
     item_description: "Video conferencing subscription"
     payment_method: "direct_debit"
-  
+
   docraptor:
     contact_id: 34567890
     contact_full_name: "DocRaptor"
     item_description: "PDF generation services"
     payment_method: "credit_card"
-  
+
   github:
     contact_id: 45678901
     contact_full_name: "GitHub Inc"
     item_description: "Code repository hosting"
     payment_method: "credit_card"
-  
+
   aws:
     contact_id: 56789012
     contact_full_name: "Amazon Web Services Inc."
     item_description: "Cloud computing services"
     payment_method: "credit_card"
-  
+
   digitalocean:
     contact_id: 67890123
     contact_full_name: "DigitalOcean LLC"
     item_description: "Cloud hosting services"
     payment_method: "credit_card"
-  
+    rules:
+      - "the tax_percentage should always be 0.0."
+
   stripe:
     contact_id: 78901234
     contact_full_name: "Stripe Inc."
     item_description: "Payment processing fees"
     payment_method: "wire_transfer"
-  
+
   google:
     contact_id: 89012345
     contact_full_name: "Google LLC"
