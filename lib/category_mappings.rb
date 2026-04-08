@@ -20,10 +20,11 @@ module CategoryMappings
         contact_id: details['contact_id'],
         contact_full_name: details['contact_full_name'],
         item_description: details['item_description'],
-        payment_method: details['payment_method']
+        payment_method: details['payment_method'],
+        identifiers: Array(details['identifiers'])
       }
     end
-    
+
     vendors.freeze
   end
   

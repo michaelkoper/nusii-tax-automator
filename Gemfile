@@ -19,6 +19,9 @@ gem 'faraday', '~> 2.9'
 # PDF processing
 gem 'pdf-reader', '~> 2.12'
 
+# Templating
+gem 'liquid', '~> 5.5'
+
 # Development
 group :development do
   gem 'pry'

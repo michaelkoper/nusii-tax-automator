@@ -3,11 +3,18 @@
 # Copy this file to config/category_mappings.yml and update with your actual contact IDs
 
 vendors:
+  # Each vendor supports an optional `identifiers` list with hints the LLM can
+  # use to recognize the invoice when the vendor name only appears in the logo
+  # (not in the extracted PDF text). Identifiers are injected into the prompt
+  # alongside the vendor name.
   openai:
     contact_id: 12345678
     contact_full_name: "OpenAI, LLC"
     item_description: "AI API usage"
     payment_method: "credit_card"
+    # identifiers:
+    #   - "footer text or address that uniquely identifies this vendor"
+    #   - "specific product names or SKU patterns"
   
   zoom:
     contact_id: 23456789

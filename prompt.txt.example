@@ -1,17 +1,16 @@
-Parse the following text and return the extracted information in JSON format. 
-The JSON should contain fields for 'category', 'pre_tax_price', 'tax', 
-'tax_percentage', 'total_price', 'retencion', 'retencion_percentage', 'currency', and 'date'. 
+Parse the following text and return the extracted information in JSON format.
+The JSON should contain fields for 'category', 'pre_tax_price', 'tax',
+'tax_percentage', 'total_price', 'retencion', 'retencion_percentage', 'currency', and 'date'.
 
-The 'category' field should be one of the following: 
-company_a, company_b, company_c, company_d, company_e, 
-contractor_a, contractor_b, service_a, service_b, service_c, 
-service_d, service_e, service_f, unknown
+The 'category' field should match one of the keys in the mapping below. Use
+'unknown' if none of them fits the invoice. Some entries have additional
+"identifiers" listed underneath — these are hints for recognizing the vendor
+when the invoice text does not contain the brand name directly (e.g. the brand
+only appears in the logo). If the parsed text matches any identifier, use that
+category.
 
-Example mappings:
-- Company A Inc. should have category company_a
-- Service Provider B should have category service_b
-- Contractor John Doe should have category contractor_a
-- Cloud Service X should have category service_c
+Category mapping (key: vendor full name — item description):
+{{ category_mappings }}
 
 Special handling rules:
 - For Service Provider D, the tax_percentage should be 0.0
@@ -31,4 +30,4 @@ Note that some invoices may use ',' instead of '.' as a decimal separator.
 For multi-currency invoices, only use the primary currency amounts.
 
 Here is the text to parse:
-{TEXT_TO_PARSE}
+{{ text_to_parse }}

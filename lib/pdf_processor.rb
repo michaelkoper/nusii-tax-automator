@@ -2,8 +2,12 @@ require 'pdf-reader'
 require 'ruby/openai'
 require 'json'
 require 'fileutils'
+require 'liquid'
+require_relative 'category_mappings'
 
 class PdfProcessor
+  include CategoryMappings
+
   def initialize
     @openai_client = OpenAI::Client.new(access_token: ENV['OPENAI_API_KEY'])
     @email_attachments_folder = ENV['EMAIL_ATTACHMENTS_FOLDER']
@@ -20,7 +24,9 @@ class PdfProcessor
       puts "Processing #{filename}"
 
       text = extract_text_from_pdf(pdf_path)
-      processed_data = process_text_with_openai(text)
+      prompt = build_prompt(text)
+      log_prompt(filename, prompt)
+      processed_data = process_text_with_openai(prompt)
 
       if processed_data
         processed_data['filename'] = filename
@@ -53,9 +59,7 @@ class PdfProcessor
     ''
   end
 
-  def process_text_with_openai(text)
-    prompt = build_prompt(text)
-
+  def process_text_with_openai(prompt)
     response = @openai_client.chat(
       parameters: {
         model: 'gpt-4',
@@ -87,6 +91,15 @@ class PdfProcessor
     nil
   end
 
+  def log_prompt(filename, prompt)
+    prompts_dir = File.join(@temp_dir, 'prompts')
+    FileUtils.mkdir_p(prompts_dir)
+
+    log_path = File.join(prompts_dir, "#{File.basename(filename, '.pdf')}.txt")
+    File.write(log_path, prompt)
+    puts "Logged prompt to #{log_path}"
+  end
+
   def build_prompt(text)
     prompt_file_path = File.join(ENV['CODE_ROOT'] || File.dirname(__FILE__), 'prompt.txt')
 
@@ -94,8 +107,20 @@ class PdfProcessor
       raise "Prompt file not found at #{prompt_file_path}. Please create it from prompt.txt.example"
     end
 
-    prompt_template = File.read(prompt_file_path)
-    prompt_template.gsub('{TEXT_TO_PARSE}', text)
+    template = Liquid::Template.parse(File.read(prompt_file_path))
+    template.render(
+      'text_to_parse' => text,
+      'category_mappings' => format_category_mappings
+    )
+  end
+
+  def format_category_mappings
+    CATEGORY_DETAILS.map do |key, details|
+      line = "- #{key}: #{details[:contact_full_name]} — #{details[:item_description]}"
+      identifiers = details[:identifiers]
+      line += "\n    (identifiers: #{identifiers.join('; ')})" if identifiers.any?
+      line
+    end.join("\n")
   end
 
   def save_expenses_to_json(expenses)

@@ -113,7 +113,16 @@ The system automatically categorizes invoices from known vendors using the `conf
 - Payment methods (credit_card, direct_debit, etc.)
 - Mappings for vendor name variations
 
-To add a new vendor, edit `config/category_mappings.yml` and add an entry under the `vendors` section.
+To add a new vendor, edit `config/category_mappings.yml` and add an entry under the `vendors` section. The full vendor list is automatically injected into the AI prompt at runtime — there's no need to edit `prompt.txt` when adding a vendor.
+
+### Prompt Template
+
+`prompt.txt` is rendered with [Liquid](https://shopify.github.io/liquid/) before being sent to OpenAI. Two variables are available:
+
+- `{{ text_to_parse }}` — the extracted text of the PDF invoice being processed
+- `{{ category_mappings }}` — a bullet list built from `config/category_mappings.yml`, giving the LLM the full set of valid category keys and their vendor names
+
+See `prompt.txt.example` for a starting template.
 
 ## Temporary Files
 
@@ -148,9 +157,15 @@ vendors:
     contact_full_name: "Vendor Name"
     item_description: "Service description"
     payment_method: "credit_card"
+    # Optional: hints for the LLM when the vendor name is not in the extracted
+    # PDF text (e.g. it only appears in the logo). Include any unique strings
+    # from the footer, cluster/product naming patterns, etc.
+    identifiers:
+      - "footer 'Some Company | Suite 3A'"
+      - "product names like 'widget-pro' or 'widget-basic'"
 ```
 
-3. Update the AI prompt in `prompt.txt` to recognize the vendor in invoice processing
+The vendor list and its identifiers are injected into the LLM prompt automatically at runtime — no need to edit `prompt.txt`.
 
 ## Security Notes
 
