@@ -23,7 +23,6 @@ class PdfProcessor
 
       text = extract_text_from_pdf(pdf_path)
       prompt = build_prompt(text)
-      log_prompt(filename, prompt)
       processed_data = process_text_with_openai(prompt)
 
       if processed_data
@@ -87,15 +86,6 @@ class PdfProcessor
   rescue StandardError => e
     puts "An error occurred with OpenAI: #{e.message}"
     nil
-  end
-
-  def log_prompt(filename, prompt)
-    prompts_dir = File.join(@temp_dir, 'prompts')
-    FileUtils.mkdir_p(prompts_dir)
-
-    log_path = File.join(prompts_dir, "#{File.basename(filename, '.pdf')}.txt")
-    File.write(log_path, prompt)
-    puts "Logged prompt to #{log_path}"
   end
 
   def build_prompt(text)
