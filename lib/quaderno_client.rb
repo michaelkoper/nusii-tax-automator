@@ -10,7 +10,7 @@ class QuadernoClient
     @api_url = ENV['QUADERNO_API_URL']
     @email_attachments_folder = ENV['EMAIL_ATTACHMENTS_FOLDER']
     @dropbox_folder = ENV['DROPBOX_FOLDER']
-    @temp_dir = File.join(ENV['CODE_ROOT'], 'temp')
+    @temp_dir = File.join(ENV['CODE_ROOT'] || File.expand_path('..', __dir__), 'temp')
 
     @connection = Faraday.new(url: @api_url) do |faraday|
       faraday.request :json
@@ -19,6 +19,46 @@ class QuadernoClient
       faraday.adapter Faraday.default_adapter
     end
   end
+
+  # ---- List resources (with optional date filtering and auto-pagination) ----
+
+  def list_invoices(from: nil, to: nil)
+    list_all('invoices', date_params(from, to))
+  end
+
+  def list_expenses(from: nil, to: nil)
+    list_all('expenses', date_params(from, to))
+  end
+
+  def list_credits(from: nil, to: nil)
+    list_all('credits', date_params(from, to))
+  end
+
+  def list_contacts(q: nil)
+    params = {}
+    params[:q] = q if q
+    list_all('contacts', params)
+  end
+
+  # ---- Get single resource by ID ----
+
+  def get_invoice(id)
+    get_resource('invoices', id)
+  end
+
+  def get_expense(id)
+    get_resource('expenses', id)
+  end
+
+  def get_credit(id)
+    get_resource('credits', id)
+  end
+
+  def get_contact(id)
+    get_resource('contacts', id)
+  end
+
+  # ---- Existing public methods ----
 
   def upload_expenses
     expenses_file = File.join(@temp_dir, 'expenses.json')
@@ -58,18 +98,76 @@ class QuadernoClient
     response = @connection.post('contacts', attributes)
 
     if response.status == 201
-      puts "Contact created: #{response.body['full_name']} (id: #{response.body['id']})"
+      $stderr.puts "Contact created: #{response.body['full_name']} (id: #{response.body['id']})"
     else
-      puts "Error creating contact: #{response.body}"
+      $stderr.puts "Error creating contact: #{response.body}"
     end
 
     response.body
   rescue Faraday::Error => e
-    puts "HTTP Error: #{e.message}"
+    $stderr.puts "HTTP Error: #{e.message}"
     { 'error' => e.message }
   end
 
   private
+
+  # ---- Query helpers ----
+
+  def date_params(from, to)
+    params = {}
+    if from && to
+      params[:date] = "#{from},#{to}"
+    elsif from
+      params[:date] = "#{from},2099-12-31"
+    elsif to
+      params[:date] = "2000-01-01,#{to}"
+    end
+    params
+  end
+
+  def list_all(endpoint, params = {})
+    results = []
+    next_url = nil
+
+    loop do
+      response = if next_url
+                   @connection.get(next_url)
+                 else
+                   @connection.get(endpoint, params)
+                 end
+
+      unless response.success?
+        raise "Quaderno API error (#{response.status}): #{response.body}"
+      end
+
+      batch = response.body
+      break if !batch.is_a?(Array) || batch.empty?
+
+      results.concat(batch)
+
+      has_more = response.headers['x-pages-hasmore']
+      break unless has_more == 'true'
+
+      next_url = response.headers['x-pages-nextpage']
+      break unless next_url
+
+      # Strip the base URL if present — Faraday needs a relative path
+      next_url = next_url.sub(@api_url.to_s, '')
+    end
+    results
+  end
+
+  def get_resource(endpoint, id)
+    response = @connection.get("#{endpoint}/#{id}")
+
+    unless response.success?
+      raise "Quaderno API error (#{response.status}): #{response.body}"
+    end
+
+    response.body
+  end
+
+  # ---- Expense building ----
 
   def build_expense_data(expense, details)
     item = {

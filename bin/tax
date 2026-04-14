@@ -1,0 +1,189 @@
+#!/usr/bin/env ruby
+
+# CLI for accessing Quaderno tax data. Outputs JSON to stdout.
+#
+# Usage:
+#   bin/tax invoices [OPTIONS]          List invoices
+#   bin/tax invoices ID                 Get a single invoice
+#   bin/tax expenses [OPTIONS]          List expenses
+#   bin/tax expenses ID                 Get a single expense
+#   bin/tax credits [OPTIONS]           List credit notes
+#   bin/tax credits ID                  Get a single credit note
+#   bin/tax contacts [OPTIONS]          List contacts
+#   bin/tax contacts ID                 Get a single contact
+#   bin/tax contacts create [OPTIONS]   Create a new contact
+#   bin/tax contacts local              Show local contacts config
+#
+# Date filters (for list commands):
+#   --from DATE           Start date (YYYY-MM-DD)
+#   --to DATE             End date (YYYY-MM-DD)
+#   --month MONTH         Month (YYYY-MM or M for current year)
+#   --quarter QUARTER     Quarter (Q1-Q4, or Q1-2026)
+#   --last-month          Previous month
+#   --last-quarter        Previous quarter
+#   --year YEAR           Default year for month/quarter shortcuts
+
+project_root = File.expand_path('..', __dir__)
+ENV['BUNDLE_GEMFILE'] ||= File.join(project_root, 'Gemfile')
+
+require 'bundler/setup'
+require 'dotenv'
+Dotenv.load(File.join(project_root, '.env'))
+
+ENV['CODE_ROOT'] ||= project_root
+
+require 'optparse'
+require 'json'
+require_relative '../lib/quaderno_client'
+require_relative '../lib/date_helper'
+require_relative '../lib/contacts'
+
+def print_usage
+  $stderr.puts <<~USAGE
+    Usage: bin/tax COMMAND [OPTIONS]
+
+    Commands:
+      invoices [ID]           List invoices or get one by ID
+      expenses [ID]           List expenses or get one by ID
+      credits [ID]            List credit notes or get one by ID
+      contacts [ID]           List contacts or get one by ID
+      contacts create         Create a new contact
+      contacts local          Show local contacts config (contacts.yml)
+
+    Date filters (for list commands):
+      --from DATE             Start date (YYYY-MM-DD)
+      --to DATE               End date (YYYY-MM-DD)
+      --month MONTH           Month (YYYY-MM or M for current year)
+      --quarter QUARTER       Quarter (Q1-Q4, or Q1-2026)
+      --last-month            Previous month
+      --last-quarter          Previous quarter
+      --year YEAR             Default year for month/quarter shortcuts
+
+    Contact filters:
+      --query QUERY           Search contacts by name
+
+    Contact creation:
+      --full-name NAME        Contact full name (required)
+      --tax-id ID             Tax identification number
+      --email EMAIL           Contact email
+      --kind KIND             person or company (default: company)
+      --country COUNTRY       2-letter country code
+
+    Examples:
+      bin/tax invoices --last-quarter
+      bin/tax expenses --month 2026-03
+      bin/tax expenses --quarter Q1-2026
+      bin/tax invoices --from 2026-01-01 --to 2026-03-31
+      bin/tax contacts --query "OpenAI"
+      bin/tax contacts create --full-name "Acme Corp" --tax-id "B12345" --country ES
+      bin/tax contacts local
+
+    Output is JSON to stdout. Status messages go to stderr.
+  USAGE
+end
+
+def parse_date_options(argv)
+  options = {}
+  parser = OptionParser.new do |opts|
+    opts.on('--from DATE') { |v| options[:from] = v }
+    opts.on('--to DATE') { |v| options[:to] = v }
+    opts.on('--month MONTH') { |v| options[:month] = v }
+    opts.on('--quarter QUARTER') { |v| options[:quarter] = v }
+    opts.on('--last-month') { options[:last_month] = true }
+    opts.on('--last-quarter') { options[:last_quarter] = true }
+    opts.on('--year YEAR', Integer) { |v| options[:year] = v }
+  end
+  remaining = parser.parse!(argv)
+  [options, remaining]
+end
+
+def parse_contact_create_options(argv)
+  options = {}
+  parser = OptionParser.new do |opts|
+    opts.on('--full-name NAME') { |v| options[:full_name] = v }
+    opts.on('--tax-id ID') { |v| options[:tax_id] = v }
+    opts.on('--email EMAIL') { |v| options[:email] = v }
+    opts.on('--kind KIND') { |v| options[:kind] = v }
+    opts.on('--country COUNTRY') { |v| options[:country] = v }
+    opts.on('--city CITY') { |v| options[:city] = v }
+    opts.on('--street STREET') { |v| options[:street_line_1] = v }
+    opts.on('--postal-code CODE') { |v| options[:postal_code] = v }
+  end
+  parser.parse!(argv)
+  options
+end
+
+if ARGV.empty? || %w[-h --help help].include?(ARGV.first)
+  print_usage
+  exit
+end
+
+command = ARGV.shift
+
+begin
+  case command
+  when 'invoices', 'expenses', 'credits'
+    date_options, remaining = parse_date_options(ARGV)
+
+    if remaining.first&.match?(/\A\d+\z/)
+      id = remaining.first.to_i
+      client = QuadernoClient.new
+      method_name = "get_#{command.delete_suffix('s')}"
+      # credits -> credit, expenses -> expense, invoices -> invoice
+      result = client.send(method_name, id)
+    else
+      from_date, to_date = DateHelper.parse_range(**date_options)
+      client = QuadernoClient.new
+      result = client.send("list_#{command}", from: from_date, to: to_date)
+      $stderr.puts "Found #{result.length} #{command}"
+    end
+
+    puts JSON.pretty_generate(result)
+
+  when 'contacts'
+    if ARGV.first == 'create'
+      ARGV.shift
+      attrs = parse_contact_create_options(ARGV)
+      unless attrs[:full_name]
+        $stderr.puts "Error: --full-name is required for contact creation"
+        exit 1
+      end
+      client = QuadernoClient.new
+      result = client.create_contact(attrs)
+      puts JSON.pretty_generate(result)
+
+    elsif ARGV.first == 'local'
+      # Show local contacts config from contacts.yml
+      result = Contacts.all.transform_keys(&:to_s)
+      puts JSON.pretty_generate(result)
+
+    elsif ARGV.first&.match?(/\A\d+\z/)
+      id = ARGV.first.to_i
+      client = QuadernoClient.new
+      result = client.get_contact(id)
+      puts JSON.pretty_generate(result)
+
+    else
+      q = nil
+      OptionParser.new do |opts|
+        opts.on('--query QUERY', '-q QUERY') { |v| q = v }
+      end.parse!(ARGV)
+      client = QuadernoClient.new
+      result = client.list_contacts(q: q)
+      $stderr.puts "Found #{result.length} contacts"
+      puts JSON.pretty_generate(result)
+    end
+
+  else
+    $stderr.puts "Unknown command: #{command}"
+    print_usage
+    exit 1
+  end
+
+rescue ArgumentError => e
+  $stderr.puts "Error: #{e.message}"
+  exit 1
+rescue RuntimeError => e
+  $stderr.puts "Error: #{e.message}"
+  exit 1
+end

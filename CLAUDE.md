@@ -63,3 +63,54 @@ The main entry point provides an interactive menu with these options:
 bundle install  # Install dependencies
 ruby taxes.rb   # Run the interactive tax processor
 ```
+
+## CLI: bin/tax
+
+The `bin/tax` command provides non-interactive access to Quaderno data. It outputs JSON to stdout and status messages to stderr. Use this for programmatic access (e.g., from Claude Code agents).
+
+### Commands
+
+```bash
+bin/tax invoices [OPTIONS]          # List invoices (sales/income)
+bin/tax invoices ID                 # Get a single invoice by ID
+bin/tax expenses [OPTIONS]          # List expenses (purchases)
+bin/tax expenses ID                 # Get a single expense by ID
+bin/tax credits [OPTIONS]           # List credit notes
+bin/tax credits ID                  # Get a single credit note by ID
+bin/tax contacts [OPTIONS]          # List contacts from Quaderno
+bin/tax contacts ID                 # Get a single contact by ID
+bin/tax contacts create [OPTIONS]   # Create a new contact in Quaderno
+bin/tax contacts local              # Show local contacts config (contacts.yml)
+```
+
+### Date Filtering
+
+All list commands for invoices, expenses, and credits support date filtering:
+
+```bash
+bin/tax invoices --last-month
+bin/tax invoices --last-quarter
+bin/tax expenses --month 2026-03          # Specific month
+bin/tax expenses --month 3                # Month 3 of current year
+bin/tax expenses --quarter Q1-2026        # Specific quarter
+bin/tax expenses --quarter Q1             # Q1 of current year
+bin/tax invoices --from 2026-01-01 --to 2026-03-31  # Arbitrary range
+bin/tax credits --year 2025 --quarter Q4  # Year + quarter
+```
+
+### Contact Operations
+
+```bash
+bin/tax contacts --query "OpenAI"         # Search contacts by name
+bin/tax contacts create --full-name "Acme Corp" --tax-id "B12345" --country ES
+bin/tax contacts local                    # Dump contacts.yml as JSON
+```
+
+### Modelo Verification Workflow
+
+To verify a modelo (tax form), use the CLI to pull Quaderno data and cross-check:
+
+1. Fetch all invoices (income) for the period: `bin/tax invoices --quarter Q1-2026`
+2. Fetch all expenses for the period: `bin/tax expenses --quarter Q1-2026`
+3. Fetch credit notes if any: `bin/tax credits --quarter Q1-2026`
+4. Read the modelo PDF and compare totals against the Quaderno data
