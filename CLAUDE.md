@@ -108,9 +108,44 @@ bin/tax contacts local                    # Dump contacts.yml as JSON
 
 ### Modelo Verification Workflow
 
-To verify a modelo (tax form), use the CLI to pull Quaderno data and cross-check:
+Use the `summary` command to generate pre-computed box values for all modelos:
 
-1. Fetch all invoices (income) for the period: `bin/tax invoices --quarter Q1-2026`
-2. Fetch all expenses for the period: `bin/tax expenses --quarter Q1-2026`
-3. Fetch credit notes if any: `bin/tax credits --quarter Q1-2026`
-4. Read the modelo PDF and compare totals against the Quaderno data
+```bash
+bin/tax summary --quarter Q1-2026
+```
+
+This outputs a JSON structure with expected values for Modelos 111, 303, 349, and 369, including:
+- IRPF withholding totals (111)
+- VAT box values with domestic/EU/non-EU classification (303)
+- EU operator listing with per-operator amounts (349)
+- OSS country breakdown with arithmetic checks (369)
+- Stripe fee totals extracted from PDF invoices (added to EU intra-community)
+
+The summary automatically:
+- Fetches invoices, expenses, and credit notes from Quaderno
+- Converts all amounts to EUR using Quaderno exchange rates
+- Classifies invoices as EU B2B / non-EU / EU B2C (OSS)
+- Classifies expenses as domestic / EU intra-community / non-EU reverse charge
+- Parses Stripe PDF invoices for the "Total fees in EUR" line
+- Handles Greece GR→EL country code mapping for OSS
+
+For raw data access, the individual commands are still available:
+
+```bash
+bin/tax invoices --quarter Q1-2026
+bin/tax expenses --quarter Q1-2026
+bin/tax credits --quarter Q1-2026
+```
+
+### Summary Configuration
+
+The summary command uses these environment variables (see `.env.example`):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `COMPANY_COUNTRY` | `ES` | 2-letter country code for domestic classification |
+| `VAT_RATE` | `21` | VAT rate for reverse charge self-assessment |
+| `STRIPE_VAT_ID` | — | Stripe's EU VAT ID for Modelo 349 operator entry |
+| `STRIPE_INVOICE_PATH` | — | Override Stripe invoice glob pattern (uses `{year}`, `{month}` placeholders) |
+| `DROPBOX_FOLDER` | — | Base path for tax documents (also used to find Stripe PDFs) |
+| `COMPANY_NAME` | — | Used in default Stripe invoice folder path |
