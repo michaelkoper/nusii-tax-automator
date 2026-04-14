@@ -8,6 +8,8 @@ Automated tax processing system for Nusii Proposals S.L. that handles expense tr
 - **PDF Invoice Processing**: Extract data from PDF invoices using OpenAI's GPT-4
 - **Quaderno Integration**: Upload processed expenses to Quaderno with proper categorization
 - **Automated Filing**: Organize processed invoices into monthly tax folders
+- **Quaderno CLI** (`bin/tax`): Non-interactive access to invoices, expenses, credits, and contacts with date filtering
+- **Tax Summary**: Generate pre-computed box values for Spanish tax modelos (111, 303, 349, 369) with automatic EUR conversion and transaction classification
 
 ## Prerequisites
 
@@ -42,12 +44,22 @@ cp .env.example .env
 COMPANY_NAME=YourCompanyName
 # Comma-separated list of currencies for Stripe reports (e.g., usd,eur or usd,eur,gbp)
 STRIPE_CURRENCIES=usd
+# 2-letter country code where the company is registered (default: ES)
+COMPANY_COUNTRY=ES
+# Standard VAT rate for reverse charge self-assessment (default: 21)
+VAT_RATE=21
 
 # Required API keys
 STRIPE_API_KEY=your_stripe_api_key
 OPENAI_API_KEY=your_openai_api_key
 QUADERNO_API_KEY=your_quaderno_api_key
 QUADERNO_API_URL=https://your_account.quadernoapp.com/api/
+
+# Stripe modelo verification
+# Stripe's EU VAT ID — used to add Stripe as an operator in Modelo 349
+STRIPE_VAT_ID=IE3206488LH
+# Optional: override Stripe invoice path pattern (uses {year} and {month} placeholders)
+# STRIPE_INVOICE_PATH=/custom/path/{year}/{month}/Stripe*.pdf
 
 # Paths
 DROPBOX_FOLDER=/path/to/your/dropbox/taxes/folder
@@ -56,6 +68,8 @@ CODE_ROOT=/path/to/this/code/directory
 ```
 
 ## Usage
+
+### Interactive Mode
 
 Run the main tax processor:
 
@@ -71,6 +85,62 @@ The interactive menu provides these options:
 4. **Upload to Quaderno** - Uploads processed invoices to Quaderno
 5. **Compress tax folder** - Creates a zip file of the monthly tax folder
 6. **Exit** - Quit the application
+
+### CLI: `bin/tax`
+
+The `bin/tax` command provides non-interactive access to Quaderno data. It outputs JSON to stdout and status messages to stderr, making it suitable for programmatic access and scripting.
+
+```bash
+bin/tax invoices [OPTIONS]          # List invoices (sales/income)
+bin/tax invoices ID                 # Get a single invoice by ID
+bin/tax expenses [OPTIONS]          # List expenses (purchases)
+bin/tax expenses ID                 # Get a single expense by ID
+bin/tax credits [OPTIONS]           # List credit notes
+bin/tax credits ID                  # Get a single credit note by ID
+bin/tax contacts [OPTIONS]          # List contacts
+bin/tax contacts ID                 # Get a single contact by ID
+bin/tax contacts create [OPTIONS]   # Create a new contact
+bin/tax contacts local              # Show local contacts config (contacts.yml)
+bin/tax summary --quarter Q1-2026   # Generate modelo verification summary
+```
+
+#### Date Filtering
+
+All list commands for invoices, expenses, and credits support date filtering:
+
+```bash
+bin/tax invoices --last-month
+bin/tax invoices --last-quarter
+bin/tax expenses --month 2026-03          # Specific month
+bin/tax expenses --month 3                # Month 3 of current year
+bin/tax expenses --quarter Q1-2026        # Specific quarter
+bin/tax expenses --quarter Q1             # Q1 of current year
+bin/tax invoices --from 2026-01-01 --to 2026-03-31  # Arbitrary range
+```
+
+#### Contact Operations
+
+```bash
+bin/tax contacts --query "OpenAI"         # Search contacts by name
+bin/tax contacts create --full-name "Acme Corp" --tax-id "B12345" --country ES
+bin/tax contacts local                    # Dump contacts.yml as JSON
+```
+
+#### Tax Summary (Modelo Verification)
+
+The `summary` command generates pre-computed box values for Spanish tax modelos:
+
+```bash
+bin/tax summary --quarter Q1-2026
+```
+
+This outputs a JSON structure with expected values for Modelos 111, 303, 349, and 369, including:
+- **Modelo 111**: IRPF withholding totals per contact
+- **Modelo 303**: VAT box values with domestic/EU/non-EU classification
+- **Modelo 349**: EU intra-community operator listing with per-operator amounts
+- **Modelo 369**: OSS country breakdown with arithmetic checks
+
+The summary automatically fetches invoices, expenses, and credit notes from Quaderno, converts all amounts to EUR, classifies transactions by region, and parses Stripe PDF invoices for fee totals.
 
 ### Typical Workflow
 
@@ -102,8 +172,12 @@ Dropbox/Taxes/
 
 ### Environment Variables
 
-- **COMPANY_NAME**: Your company name (used in zip file naming)
+- **COMPANY_NAME**: Your company name (used in zip file naming and Stripe invoice paths)
 - **STRIPE_CURRENCIES**: Comma-separated list of currencies to download Stripe reports for (e.g., `usd`, `usd,eur`, `usd,eur,gbp`)
+- **COMPANY_COUNTRY**: 2-letter country code where the company is registered (default: `ES`)
+- **VAT_RATE**: Standard VAT rate for reverse charge self-assessment (default: `21`)
+- **STRIPE_VAT_ID**: Stripe's EU VAT ID, used to include Stripe as an operator in Modelo 349
+- **STRIPE_INVOICE_PATH**: Optional override for the Stripe invoice glob pattern (uses `{year}` and `{month}` placeholders)
 
 ### Contacts
 
