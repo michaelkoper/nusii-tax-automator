@@ -40,14 +40,17 @@ Tax documents are organized hierarchically:
 
 ## Main Script: taxes.rb
 
-The main entry point provides an interactive menu with these options:
+The main entry point asks for the month once at startup (previous, current, next, or two months ago) and reuses it for every action. It then shows an interactive menu with these options:
 
-1. Download Stripe reports for a selected month
+1. Download Stripe reports for the selected month
 2. Process PDF invoices from email attachments
 3. Display processed expenses JSON
 4. Upload expenses to Quaderno
 5. Compress tax folder into a zip archive
-6. Exit
+6. Open the tax folder in `$EDITOR`
+7. Open the tax folder in Finder
+8. Exit
+9. Change month (re-runs the month selection)
 
 ## Development Notes
 

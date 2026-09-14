@@ -77,14 +77,17 @@ Run the main tax processor:
 ruby taxes.rb
 ```
 
-The interactive menu provides these options:
+On startup you are asked once which month to work on (previous, current, next, or two months ago); every action then uses that month. The interactive menu provides these options:
 
 1. **Download Stripe reports** - Downloads monthly reports for all configured currencies
 2. **Process PDF invoices** - Extracts data from PDFs in your Email Attachments folder
 3. **Show expenses JSON file** - Display the processed expense data
 4. **Upload to Quaderno** - Uploads processed invoices to Quaderno
 5. **Compress tax folder** - Creates a zip file of the monthly tax folder
-6. **Exit** - Quit the application
+6. **Open tax folder in EDITOR** - Opens the monthly tax folder with the command in `$EDITOR` (set it in your shell or `.env`)
+7. **Open tax folder in Finder** - Reveals the monthly tax folder in Finder
+8. **Exit** - Quit the application
+9. **Change month** - Pick a different month for the following actions
 
 ### CLI: `bin/tax`
 

@@ -33,15 +33,21 @@ class TaxProcessor
   def run
     puts 'Starting automatic taxes'
 
+    # The month is chosen once at startup and reused by every action.
+    # It can be changed later via the last menu item.
+    @month = select_month
+
     loop do
-      choice = @prompt.select('What would you like to do?') do |menu|
+      choice = @prompt.select("What would you like to do? (#{month_label})") do |menu|
         menu.choice 'Download Stripe reports', 1
         menu.choice 'Process PDF invoices from Email Attachments', 2
         menu.choice 'Show expenses JSON file', 3
         menu.choice 'Upload processed invoices to Quaderno', 4
         menu.choice 'Compress tax folder', 5
-        menu.choice 'Open tax folder in Finder', 6
-        menu.choice 'Exit', 7
+        menu.choice 'Open tax folder in EDITOR', 6
+        menu.choice 'Open tax folder in Finder', 7
+        menu.choice 'Exit', 8
+        menu.choice 'Change month', 9
       end
 
       case choice
@@ -56,10 +62,15 @@ class TaxProcessor
       when 5
         compress_tax_folder
       when 6
-        open_tax_folder_in_finder
+        open_tax_folder_in_editor
       when 7
+        open_tax_folder_in_finder
+      when 8
         puts 'Bye!'
         break
+      when 9
+        @month = select_month
+        puts "\n✓ Month set to #{month_label}"
       end
     end
   end
@@ -67,29 +78,41 @@ class TaxProcessor
   private
 
   def select_month
-    choices = {
-      'Previous month': 1,
-      'Current month': 2,
-      'Next month': 3,
-      'Two months ago': 4
-    }
+    options = [
+      ['Previous month', 1.month.ago],
+      ['Current month', Time.current],
+      ['Next month', 1.month.from_now],
+      ['Two months ago', 2.months.ago]
+    ]
 
-    choice = @prompt.select('For what month do you want to do the taxes?', choices)
-
-    case choice
-    when 1 then 1.month.ago
-    when 2 then Time.current
-    when 3 then 1.month.from_now
-    when 4 then 2.months.ago
+    choices = options.each_with_object({}) do |(label, time), hash|
+      hash["#{label} (#{time.strftime('%B %Y')})"] = time
     end
+
+    @prompt.select('For what month do you want to do the taxes?', choices)
+  end
+
+  def month_label
+    @month.strftime('%B %Y')
   end
 
   def get_directory_name(month)
     "#{@dropbox_folder}/#{month.year}/#{month.year} - #{month.strftime('%m')} #{ENV.fetch('COMPANY_NAME')} Taxes"
   end
 
+  # Returns the tax folder for the selected month, or nil (after a warning) if it doesn't exist yet.
+  def existing_tax_folder
+    dir_name = get_directory_name(@month)
+    return dir_name if File.directory?(dir_name)
+
+    puts "\n❌ Directory #{dir_name} does not exist!"
+    puts 'Please create the tax folder first by downloading Stripe reports.'
+    @prompt.keypress("\nPress any key to continue...")
+    nil
+  end
+
   def download_stripe_reports
-    month = select_month
+    month = @month
     dir_name = get_directory_name(month)
 
     if @prompt.yes?('Do you want to create a folder in Dropbox?')
@@ -220,15 +243,9 @@ class TaxProcessor
   end
 
   def compress_tax_folder
-    month = select_month
-    dir_name = get_directory_name(month)
-
-    unless File.directory?(dir_name)
-      puts "\n❌ Directory #{dir_name} does not exist!"
-      puts 'Please create the tax folder first by downloading Stripe reports.'
-      @prompt.keypress("\nPress any key to continue...")
-      return
-    end
+    month = @month
+    dir_name = existing_tax_folder
+    return unless dir_name
 
     # Generate zip filename with format: YYYY-MM - CompanyName.zip
     company_name = ENV.fetch('COMPANY_NAME')
@@ -260,22 +277,38 @@ class TaxProcessor
     @prompt.keypress("\nPress any key to continue...")
   end
 
-  def open_tax_folder_in_finder
-    month = select_month
-    dir_name = get_directory_name(month)
+  def open_tax_folder_in_editor
+    dir_name = existing_tax_folder
+    return unless dir_name
 
-    unless File.directory?(dir_name)
-      puts "\n❌ Directory #{dir_name} does not exist!"
-      puts 'Please create the tax folder first by downloading Stripe reports.'
+    editor = ENV['EDITOR'].to_s.strip
+    if editor.empty?
+      puts "\n❌ The EDITOR environment variable is not set."
+      puts 'Set it in your shell or in .env (e.g. EDITOR=code) and try again.'
       @prompt.keypress("\nPress any key to continue...")
       return
     end
 
+    puts "\n📝 Opening tax folder in #{editor}..."
+    puts "Folder: #{dir_name}"
+
+    if system("#{editor} \"#{dir_name}\"")
+      puts "\n✓ Opened folder in #{editor}"
+    else
+      puts "\n❌ Failed to run '#{editor}'"
+    end
+    @prompt.keypress("\nPress any key to continue...")
+  end
+
+  def open_tax_folder_in_finder
+    dir_name = existing_tax_folder
+    return unless dir_name
+
     puts "\n📂 Opening tax folder in Finder..."
     puts "Folder: #{dir_name}"
-    
+
     system("open \"#{dir_name}\"")
-    
+
     puts "\n✓ Opened folder in Finder"
     @prompt.keypress("\nPress any key to continue...")
   end
